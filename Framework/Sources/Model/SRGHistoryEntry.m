@@ -12,10 +12,10 @@
 
 @interface SRGHistoryEntry ()
 
-@property (nonatomic, copy) NSString *mediaURN;
+@property (nonatomic, copy) NSString *itemUid;
 @property (nonatomic) double lastPlaybackPosition;
 @property (nonatomic, copy) NSDate *date;
-@property (nonatomic, copy) NSString *deviceName;
+@property (nonatomic, copy) NSString *deviceUid;
 @property (nonatomic) BOOL discarded;
 @property (nonatomic) BOOL dirty;
 
@@ -23,10 +23,10 @@
 
 @implementation SRGHistoryEntry
 
-@dynamic mediaURN;
+@dynamic itemUid;
 @dynamic lastPlaybackPosition;
 @dynamic date;
-@dynamic deviceName;
+@dynamic deviceUid;
 @dynamic discarded;
 @dynamic dirty;
 
@@ -76,7 +76,7 @@
     if (sortDescriptors) {
         [allSortDescriptors addObjectsFromArray:sortDescriptors];
     }
-    [allSortDescriptors addObject:[NSSortDescriptor sortDescriptorWithKey:@keypath(SRGHistoryEntry.new, mediaURN) ascending:NO]];
+    [allSortDescriptors addObject:[NSSortDescriptor sortDescriptorWithKey:@keypath(SRGHistoryEntry.new, itemUid) ascending:NO]];
     fetchRequest.sortDescriptors = [allSortDescriptors copy];
     
     fetchRequest.fetchBatchSize = 100;
@@ -85,7 +85,7 @@
 
 + (SRGHistoryEntry *)historyEntryWithURN:(NSString *)URN inManagedObjectContext:(NSManagedObjectContext *)managedObjectContext
 {
-    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"%K == %@", @keypath(SRGHistoryEntry.new, mediaURN), URN];
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"%K == %@", @keypath(SRGHistoryEntry.new, itemUid), URN];
     return [self historyEntriesMatchingPredicate:predicate sortedWithDescriptors:nil inManagedObjectContext:managedObjectContext].firstObject;
 }
 
@@ -94,7 +94,7 @@
     SRGHistoryEntry *historyEntry = [self historyEntryWithURN:URN inManagedObjectContext:managedObjectContext];
     if (! historyEntry) {
         historyEntry = [NSEntityDescription insertNewObjectForEntityForName:NSStringFromClass(self) inManagedObjectContext:managedObjectContext];
-        historyEntry.mediaURN = URN;
+        historyEntry.itemUid = URN;
     }
     historyEntry.dirty = YES;
     historyEntry.discarded = NO;
@@ -124,8 +124,8 @@
 - (NSDictionary *)dictionary
 {
     NSMutableDictionary *JSONDictionary = [NSMutableDictionary dictionary];
-    JSONDictionary[@"item_id"] = self.mediaURN;
-    JSONDictionary[@"device_id"] = self.deviceName;
+    JSONDictionary[@"item_id"] = self.itemUid;
+    JSONDictionary[@"device_id"] = self.deviceUid;
     JSONDictionary[@"last_playback_position"] = @(self.lastPlaybackPosition);
     JSONDictionary[@"date"] = @(round(self.date.timeIntervalSince1970 * 1000.));
     JSONDictionary[@"deleted"] = @(self.discarded);
@@ -136,8 +136,8 @@
 
 - (void)updateWithDictionary:(NSDictionary *)dictionary
 {
-    self.mediaURN = dictionary[@"item_id"];
-    self.deviceName = dictionary[@"device_id"];
+    self.itemUid = dictionary[@"item_id"];
+    self.deviceUid = dictionary[@"device_id"];
     self.lastPlaybackPosition = [dictionary[@"last_playback_position"] doubleValue];
     self.date = [NSDate dateWithTimeIntervalSince1970:[dictionary[@"date"] doubleValue] / 1000.];
     self.discarded = [dictionary[@"deleted"] boolValue];

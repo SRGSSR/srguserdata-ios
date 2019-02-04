@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="14460.32" systemVersion="18C54" minimumToolsVersion="Automatic" sourceLanguage="Objective-C" userDefinedModelVersionIdentifier="">
+    <entity name="SRGHistoryEntry" representedClassName="SRGHistoryEntry" syncable="YES">
+        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="deviceUid" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="dirty" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="discarded" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" syncable="YES"/>
+        <attribute name="itemUid" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="lastPlaybackPosition" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES" syncable="YES"/>
+    </entity>
+    <entity name="SRGUser" representedClassName="SRGUser" syncable="YES">
+        <attribute name="accountUid" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="historyLocalSynchronizationDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+        <attribute name="historyServerSynchronizationDate" optional="YES" attributeType="Date" usesScalarValueType="NO" syncable="YES"/>
+    </entity>
+    <entity name="SRGUserDataDummyClassForWarningSuppression" representedClassName="SRGUserDataDummyClassForWarningSuppression" syncable="YES" codeGenerationType="class"/>
+    <elements>
+        <element name="SRGHistoryEntry" positionX="-63" positionY="-18" width="128" height="135"/>
+        <element name="SRGUser" positionX="-63" positionY="27" width="128" height="90"/>
+        <element name="SRGUserDataDummyClassForWarningSuppression" positionX="-63" positionY="27" width="128" height="45"/>
+    </elements>
+</model>

@@ -125,7 +125,7 @@ NSString *SRGUserDataMarketingVersion(void)
         SRGUser *mainUser = [SRGUser mainUserInManagedObjectContext:managedObjectContext];
         if (mainUser) {
             NSArray<SRGHistoryEntry *> *historyEntries = [SRGHistoryEntry historyEntriesMatchingPredicate:nil sortedWithDescriptors:nil inManagedObjectContext:managedObjectContext];
-            URNs = [historyEntries valueForKeyPath:[NSString stringWithFormat:@"@distinctUnionOfObjects.%@", @keypath(SRGHistoryEntry.new, mediaURN)]];
+            URNs = [historyEntries valueForKeyPath:[NSString stringWithFormat:@"@distinctUnionOfObjects.%@", @keypath(SRGHistoryEntry.new, itemUid)]];
             
             [SRGHistoryEntry deleteAllInManagedObjectContext:managedObjectContext];
             [mainUser detach];

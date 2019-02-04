@@ -90,7 +90,7 @@
         NSPredicate *predicate = [NSPredicate predicateWithFormat:@"%K == NO", @keypath(SRGHistoryEntry.new, discarded)];
         NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:@keypath(SRGHistoryEntry.new, date) ascending:NO];
         NSArray<SRGHistoryEntry *> *historyEntries = [SRGHistoryEntry historyEntriesMatchingPredicate:predicate sortedWithDescriptors:@[sortDescriptor] inManagedObjectContext:managedObjectContext];
-        return [historyEntries valueForKeyPath:@keypath(SRGHistoryEntry.new, mediaURN)];
+        return [historyEntries valueForKeyPath:@keypath(SRGHistoryEntry.new, itemUid)];
     }];
 
     SRGBaseRequest *request = [[SRGDataProvider.currentDataProvider mediasWithURNs:mediaURNs completionBlock:^(NSArray<SRGMedia *> * _Nullable medias, SRGPage * _Nonnull page, SRGPage * _Nullable nextPage, NSHTTPURLResponse * _Nullable HTTPResponse, NSError * _Nullable error) {

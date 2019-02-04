@@ -31,7 +31,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  *  The item unique identifier.
  */
-@property (nonatomic, readonly, copy, nullable) NSString *mediaURN;
+@property (nonatomic, readonly, copy, nullable) NSString *itemUid;
 
 /**
  *  The playback position which the item was played at.
@@ -46,7 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  *  An identifier for the device which updated the entry.
  */
-@property (nonatomic, readonly, copy, nullable) NSString *deviceName;
+@property (nonatomic, readonly, copy, nullable) NSString *deviceUid;
 
 /**
  *  `YES` iff the entry has been marked as discarded.
