@@ -152,7 +152,6 @@ static NSUInteger s_currentPersistentStoreVersion = 3;
 {
     NSURL *storeURL = [[[NSURL fileURLWithPath:directory] URLByAppendingPathComponent:name] URLByAppendingPathExtension:@"sqlite"];
     NSURL *migratedStoreURL = [[[NSURL fileURLWithPath:directory] URLByAppendingPathComponent:[name stringByAppendingString:@"-migrated"]] URLByAppendingPathExtension:@"sqlite"];
-    NSError *error;
     
     NSString *mappingModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu_v%lu", (unsigned long)fromVersion, (unsigned long)s_currentPersistentStoreVersion] ofType:@"cdm"];
     NSURL *mappingModelFileURL = [NSURL fileURLWithPath:mappingModelFilePath];
@@ -175,8 +174,8 @@ static NSUInteger s_currentPersistentStoreVersion = 3;
                                          toDestinationURL:migratedStoreURL
                                           destinationType:NSSQLiteStoreType
                                        destinationOptions:nil
-                                                    error:&error];
-    if (migrated && !error) {
+                                                    error:NULL];
+    if (migrated) {
         [[NSFileManager defaultManager] removeItemAtURL:storeURL error:nil];
         [[NSFileManager defaultManager] moveItemAtURL:migratedStoreURL toURL:storeURL error:nil];
         return YES;
