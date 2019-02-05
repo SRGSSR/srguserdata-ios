@@ -50,13 +50,7 @@ static NSUInteger s_currentPersistentStoreVersion = 3;
             [persistentContainer loadPersistentStoresWithCompletionHandler:^(NSPersistentStoreDescription * _Nonnull persistentStoreDescription, NSError * _Nullable error) {
                 if (error) {
                     if ([error.domain isEqualToString:NSCocoaErrorDomain] && error.code == NSPersistentStoreIncompatibleVersionHashError) {
-                        NSUInteger fromVersion = s_currentPersistentStoreVersion - 1;
-                        BOOL migrated = NO;
-                        while (! migrated && fromVersion > 0) {
-                            migrated = [self migratePersistentStoreWithName:name directory:directory fromVersion:fromVersion];
-                            fromVersion--;
-                        }
-                        
+                        BOOL migrated = [self migratePersistentStoreWithName:name directory:directory];
                         if (migrated) {
                             [persistentContainer loadPersistentStoresWithCompletionHandler:^(NSPersistentStoreDescription * _Nonnull persistentStoreDescription, NSError * _Nullable error) {
                                 if (error) {
@@ -81,7 +75,24 @@ static NSUInteger s_currentPersistentStoreVersion = 3;
             viewContext.automaticallyMergesChangesFromParent = YES;
         }
         else {
-            self.legacyPersistentContainer = [[SRGPersistentContainer alloc] initWithName:name directory:directory model:model];
+            NSError *error;
+            self.legacyPersistentContainer = [[SRGPersistentContainer alloc] initWithName:name directory:directory model:model error:&error];
+            if ([error.domain isEqualToString:NSCocoaErrorDomain] && error.code == NSPersistentStoreIncompatibleVersionHashError) {
+                BOOL migrated = [self migratePersistentStoreWithName:name directory:directory];
+                if (migrated) {
+                    error = nil;
+                    self.legacyPersistentContainer = [[SRGPersistentContainer alloc] initWithName:name directory:directory model:model error:&error];
+                    if (error) {
+                        SRGUserDataLogError(@"SRGDataStore", @"Data store failed to load after migration. Reason: %@", error);
+                    }
+                }
+                else {
+                    SRGUserDataLogError(@"SRGDataStore", @"Data store failed to load and no migration found. Reason: %@", error);
+                }
+            }
+            else {
+                SRGUserDataLogError(@"SRGDataStore", @"Data store failed to load. Reason: %@", error);
+            }
             
             // The main context is for reads only. We must therefore always match what has been persisted to the store,
             // thus discarding in-memory versions when background contexts are saved and automatically merged.
@@ -125,21 +136,33 @@ static NSUInteger s_currentPersistentStoreVersion = 3;
 
 #pragma Migration
 
+- (BOOL)migratePersistentStoreWithName:(NSString *)name directory:(NSString *)directory
+{
+    NSUInteger fromVersion = s_currentPersistentStoreVersion - 1;
+    BOOL migrated = NO;
+    while (! migrated && fromVersion > 0) {
+        migrated = [self migratePersistentStoreWithName:name directory:directory fromVersion:fromVersion];
+        fromVersion--;
+    }
+    
+    return migrated;
+}
+
 - (BOOL)migratePersistentStoreWithName:(NSString *)name directory:(NSString *)directory fromVersion:(NSUInteger)fromVersion
 {
     NSURL *storeURL = [[[NSURL fileURLWithPath:directory] URLByAppendingPathComponent:name] URLByAppendingPathExtension:@"sqlite"];
     NSURL *migratedStoreURL = [[[NSURL fileURLWithPath:directory] URLByAppendingPathComponent:[name stringByAppendingString:@"-migrated"]] URLByAppendingPathExtension:@"sqlite"];
     NSError *error;
     
-    NSString *mappingModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu_v%lu", fromVersion, s_currentPersistentStoreVersion] ofType:@"cdm"];
+    NSString *mappingModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu_v%lu", (unsigned long)fromVersion, (unsigned long)s_currentPersistentStoreVersion] ofType:@"cdm"];
     NSURL *mappingModelFileURL = [NSURL fileURLWithPath:mappingModelFilePath];
     NSMappingModel *mappingModel = [[NSMappingModel alloc] initWithContentsOfURL:mappingModelFileURL];
     
-    NSString *sourceModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu", fromVersion] ofType:@"mom" inDirectory:@"SRGUserData.momd"];
+    NSString *sourceModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu", (unsigned long)fromVersion] ofType:@"mom" inDirectory:@"SRGUserData.momd"];
     NSURL *sourceModelFileURL = [NSURL fileURLWithPath:sourceModelFilePath];
     NSManagedObjectModel *sourceModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:sourceModelFileURL];
     
-    NSString *destinationModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu", s_currentPersistentStoreVersion] ofType:@"mom" inDirectory:@"SRGUserData.momd"];
+    NSString *destinationModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu", (unsigned long)s_currentPersistentStoreVersion] ofType:@"mom" inDirectory:@"SRGUserData.momd"];
     NSURL *destinationeModelFileURL = [NSURL fileURLWithPath:destinationModelFilePath];
     NSManagedObjectModel *destinationModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:destinationeModelFileURL];
     
@@ -147,7 +170,7 @@ static NSUInteger s_currentPersistentStoreVersion = 3;
     BOOL migrated = [migrationManager migrateStoreFromURL:storeURL
                                                      type:NSSQLiteStoreType
                                                   options:@{ NSMigratePersistentStoresAutomaticallyOption : @YES,
-                                                             NSInferMappingModelAutomaticallyOption : @"YES" }
+                                                             NSInferMappingModelAutomaticallyOption : @YES }
                                          withMappingModel:mappingModel
                                          toDestinationURL:migratedStoreURL
                                           destinationType:NSSQLiteStoreType

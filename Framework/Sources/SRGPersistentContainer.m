@@ -17,19 +17,18 @@
 
 #pragma mark Object creation and destruction
 
-- (instancetype)initWithName:(NSString *)name directory:(NSString *)directory model:(NSManagedObjectModel *)model
+- (instancetype)initWithName:(NSString *)name directory:(NSString *)directory model:(NSManagedObjectModel *)model error:(NSError **)error
 {
     if (self = [super init]) {
         self.persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:model];
         
         NSURL *storeURL = [[[NSURL fileURLWithPath:directory] URLByAppendingPathComponent:name] URLByAppendingPathExtension:@"sqlite"];
-        NSPersistentStore *persistentStore = [self.persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType
-                                                                                           configuration:nil
-                                                                                                     URL:storeURL
-                                                                                                 options:@{ NSMigratePersistentStoresAutomaticallyOption : @YES,
-                                                                                                            NSInferMappingModelAutomaticallyOption : @"YES" }
-                                                                                                   error:NULL];
-        NSAssert(persistentStore, @"Persistence store could not be created");
+        [self.persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType
+                                                      configuration:nil
+                                                                URL:storeURL
+                                                            options:@{ NSMigratePersistentStoresAutomaticallyOption : @NO,
+                                                                       NSInferMappingModelAutomaticallyOption : @NO }
+                                                              error:error];
         NSAssert(NSThread.isMainThread, @"Must be instantiated from the main thread");
         self.viewContext = [self managedObjectContextForPersistentStoreCoordinator:self.persistentStoreCoordinator];
     }

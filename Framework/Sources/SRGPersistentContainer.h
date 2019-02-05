@@ -19,7 +19,7 @@ API_DEPRECATED_WITH_REPLACEMENT("Use NSPersistentContainer instead", ios(9.0, 10
  *  Create an SQLite datastore saved under the specified name (the .sqlite extension will be automatically appended),
  *  stored in the provided directory, and governed by the model as parameter.
  */
-- (instancetype)initWithName:(NSString *)name directory:(NSString *)directory model:(NSManagedObjectModel *)model;
+- (instancetype)initWithName:(NSString *)name directory:(NSString *)directory model:(NSManagedObjectModel *)model error:(NSError **)error;
 
 /**
  *  Contexts
