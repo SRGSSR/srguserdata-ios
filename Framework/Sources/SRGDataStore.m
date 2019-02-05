@@ -15,6 +15,8 @@
 
 static SRGDataStore *s_sharedDataStore;
 
+static NSUInteger s_currentPersistentStoreVersion = 3;
+
 @interface SRGDataStore ()
 
 @property (nonatomic) NSOperationQueue *serialOperationQueue;
@@ -40,13 +42,35 @@ static SRGDataStore *s_sharedDataStore;
             
             NSURL *storeURL = [[[NSURL fileURLWithPath:directory] URLByAppendingPathComponent:name] URLByAppendingPathExtension:@"sqlite"];
             NSPersistentStoreDescription *persistentStoreDescription = [NSPersistentStoreDescription persistentStoreDescriptionWithURL:storeURL];
-            [persistentStoreDescription setOption:@YES forKey:NSMigratePersistentStoresAutomaticallyOption];
-            [persistentStoreDescription setOption:@YES forKey:NSInferMappingModelAutomaticallyOption];
+            persistentStoreDescription.shouldInferMappingModelAutomatically = NO;
+            persistentStoreDescription.shouldMigrateStoreAutomatically = NO;
+
             persistentContainer.persistentStoreDescriptions = @[ persistentStoreDescription ];
             
             [persistentContainer loadPersistentStoresWithCompletionHandler:^(NSPersistentStoreDescription * _Nonnull persistentStoreDescription, NSError * _Nullable error) {
                 if (error) {
-                    SRGUserDataLogError(@"SRGDataStore", @"Data store failed to load. Reason: %@", error);
+                    if ([error.domain isEqualToString:NSCocoaErrorDomain] && error.code == NSPersistentStoreIncompatibleVersionHashError) {
+                        NSUInteger fromVersion = s_currentPersistentStoreVersion - 1;
+                        BOOL migrated = NO;
+                        while (! migrated && fromVersion > 0) {
+                            migrated = [self migratePersistentStoreWithName:name directory:directory fromVersion:fromVersion];
+                            fromVersion--;
+                        }
+                        
+                        if (migrated) {
+                            [persistentContainer loadPersistentStoresWithCompletionHandler:^(NSPersistentStoreDescription * _Nonnull persistentStoreDescription, NSError * _Nullable error) {
+                                if (error) {
+                                    SRGUserDataLogError(@"SRGDataStore", @"Data store failed to load after migration. Reason: %@", error);
+                                }
+                            }];
+                        }
+                        else {
+                            SRGUserDataLogError(@"SRGDataStore", @"Data store failed to load and no migration found. Reason: %@", error);
+                        }
+                    }
+                    else {
+                        SRGUserDataLogError(@"SRGDataStore", @"Data store failed to load. Reason: %@", error);
+                    }
                 }
             }];
             self.persistentContainer = persistentContainer;
@@ -96,6 +120,46 @@ static SRGDataStore *s_sharedDataStore;
     }
     else {
         return self.legacyPersistentContainer.backgroundManagedObjectContext;
+    }
+}
+
+#pragma Migration
+
+- (BOOL)migratePersistentStoreWithName:(NSString *)name directory:(NSString *)directory fromVersion:(NSUInteger)fromVersion
+{
+    NSURL *storeURL = [[[NSURL fileURLWithPath:directory] URLByAppendingPathComponent:name] URLByAppendingPathExtension:@"sqlite"];
+    NSURL *migratedStoreURL = [[[NSURL fileURLWithPath:directory] URLByAppendingPathComponent:[name stringByAppendingString:@"-migrated"]] URLByAppendingPathExtension:@"sqlite"];
+    NSError *error;
+    
+    NSString *mappingModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu_v%lu", fromVersion, s_currentPersistentStoreVersion] ofType:@"cdm"];
+    NSURL *mappingModelFileURL = [NSURL fileURLWithPath:mappingModelFilePath];
+    NSMappingModel *mappingModel = [[NSMappingModel alloc] initWithContentsOfURL:mappingModelFileURL];
+    
+    NSString *sourceModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu", fromVersion] ofType:@"mom" inDirectory:@"SRGUserData.momd"];
+    NSURL *sourceModelFileURL = [NSURL fileURLWithPath:sourceModelFilePath];
+    NSManagedObjectModel *sourceModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:sourceModelFileURL];
+    
+    NSString *destinationModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu", s_currentPersistentStoreVersion] ofType:@"mom" inDirectory:@"SRGUserData.momd"];
+    NSURL *destinationeModelFileURL = [NSURL fileURLWithPath:destinationModelFilePath];
+    NSManagedObjectModel *destinationModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:destinationeModelFileURL];
+    
+    NSMigrationManager *migrationManager = [[NSMigrationManager alloc] initWithSourceModel:sourceModel destinationModel:destinationModel];
+    BOOL migrated = [migrationManager migrateStoreFromURL:storeURL
+                                                     type:NSSQLiteStoreType
+                                                  options:@{ NSMigratePersistentStoresAutomaticallyOption : @YES,
+                                                             NSInferMappingModelAutomaticallyOption : @"YES" }
+                                         withMappingModel:mappingModel
+                                         toDestinationURL:migratedStoreURL
+                                          destinationType:NSSQLiteStoreType
+                                       destinationOptions:nil
+                                                    error:&error];
+    if (migrated && !error) {
+        [[NSFileManager defaultManager] removeItemAtURL:storeURL error:nil];
+        [[NSFileManager defaultManager] moveItemAtURL:migratedStoreURL toURL:storeURL error:nil];
+        return YES;
+    }
+    else {
+        return NO;
     }
 }
 
