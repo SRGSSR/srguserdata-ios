@@ -154,14 +154,23 @@ static NSUInteger s_currentPersistentStoreVersion = 3;
     NSURL *migratedStoreURL = [[[NSURL fileURLWithPath:directory] URLByAppendingPathComponent:[name stringByAppendingString:@"-migrated"]] URLByAppendingPathExtension:@"sqlite"];
     
     NSString *mappingModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu_v%lu", (unsigned long)fromVersion, (unsigned long)s_currentPersistentStoreVersion] ofType:@"cdm"];
+    if (! mappingModelFilePath) {
+        return NO;
+    }
     NSURL *mappingModelFileURL = [NSURL fileURLWithPath:mappingModelFilePath];
     NSMappingModel *mappingModel = [[NSMappingModel alloc] initWithContentsOfURL:mappingModelFileURL];
     
     NSString *sourceModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu", (unsigned long)fromVersion] ofType:@"mom" inDirectory:@"SRGUserData.momd"];
+    if (! sourceModelFilePath) {
+        return NO;
+    }
     NSURL *sourceModelFileURL = [NSURL fileURLWithPath:sourceModelFilePath];
     NSManagedObjectModel *sourceModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:sourceModelFileURL];
     
     NSString *destinationModelFilePath = [NSBundle.srg_userDataBundle pathForResource:[NSString stringWithFormat:@"SRGUserData_v%lu", (unsigned long)s_currentPersistentStoreVersion] ofType:@"mom" inDirectory:@"SRGUserData.momd"];
+    if (! destinationModelFilePath) {
+        return NO;
+    }
     NSURL *destinationeModelFileURL = [NSURL fileURLWithPath:destinationModelFilePath];
     NSManagedObjectModel *destinationModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:destinationeModelFileURL];
     
